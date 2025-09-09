@@ -23,7 +23,7 @@ from unittest import mock
 from absl.testing import absltest
 from absl.testing import parameterized
 
-from langextract import schema
+from langextract.core import schema
 from langextract.core import base_model
 from langextract.core import data
 from langextract.providers import schemas

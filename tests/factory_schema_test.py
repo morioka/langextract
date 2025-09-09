@@ -19,7 +19,7 @@ from unittest import mock
 from absl.testing import absltest
 
 from langextract import factory
-from langextract import schema
+from langextract.providers import schemas
 from langextract.core import base_model
 from langextract.core import data
 
@@ -230,7 +230,7 @@ class SchemaApplicationTest(absltest.TestCase):
 
       @classmethod
       def get_schema_class(cls):
-        return schema.GeminiSchema
+        return schemas.GeminiSchema
 
       def infer(self, batch_prompts, **kwargs):
         yield []
@@ -251,7 +251,7 @@ class SchemaApplicationTest(absltest.TestCase):
           # apply_schema should have been called with the schema instance
           mock_apply.assert_called_once()
           schema_arg = mock_apply.call_args[0][0]
-          self.assertIsInstance(schema_arg, schema.GeminiSchema)
+          self.assertIsInstance(schema_arg, schemas.GeminiSchema)
 
 
 if __name__ == "__main__":

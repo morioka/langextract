@@ -282,7 +282,7 @@ class PluginSmokeTest(absltest.TestCase):
   def test_plugin_with_custom_schema(self):
     """Test that a plugin can provide its own schema implementation."""
 
-    class TestPluginSchema(lx.schema.BaseSchema):
+    class TestPluginSchema(lx.core.schema.BaseSchema):
       """Test schema implementation."""
 
       def __init__(self, config):
@@ -385,7 +385,7 @@ class PluginE2ETest(absltest.TestCase):
   def test_plugin_with_schema_e2e(self):
     """Test that a plugin with custom schema works end-to-end with extract()."""
 
-    class TestPluginSchema(lx.schema.BaseSchema):
+    class TestPluginSchema(lx.core.schema.BaseSchema):
       """Test schema implementation."""
 
       def __init__(self, config):

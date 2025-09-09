@@ -24,7 +24,7 @@ from absl.testing import parameterized
 from langextract import annotation
 from langextract import prompting
 from langextract import resolver as resolver_lib
-from langextract import schema
+from langextract.core import schema
 from langextract.core import data
 from langextract.core import tokenizer
 from langextract.core import types
@@ -1098,6 +1098,278 @@ class MultiPassHelperFunctionsTest(parameterized.TestCase):
     """Test overlap detection between extractions."""
     result = annotation._extractions_overlap(ext1, ext2)
     self.assertEqual(result, expected)
+
+
+class AnnotatorMultilingualTest(parameterized.TestCase):
+  """Tests for multilingual annotation support."""
+
+  def setUp(self):
+    super().setUp()
+    self.mock_language_model = self.enter_context(
+        mock.patch.object(gemini, "GeminiLanguageModel", autospec=True)
+    )
+    self.annotator = annotation.Annotator(
+        language_model=self.mock_language_model,
+        prompt_template=prompting.PromptTemplateStructured(description=""),
+    )
+
+  def assert_char_interval_match_source(
+      self, source_text: str, extractions: Sequence[data.Extraction]
+  ):
+    """Case-insensitive assertion that char_interval matches source text."""
+    for extraction in extractions:
+      if extraction.alignment_status == data.AlignmentStatus.MATCH_EXACT:
+        assert (
+            extraction.char_interval is not None
+        ), "char_interval should not be None for AlignmentStatus.MATCH_EXACT"
+
+        char_int = extraction.char_interval
+        start = char_int.start_pos
+        end = char_int.end_pos
+        self.assertIsNotNone(start, "start_pos should not be None")
+        self.assertIsNotNone(end, "end_pos should not be None")
+        extracted = source_text[start:end]
+        self.assertEqual(
+            extracted.lower(),
+            extraction.extraction_text.lower(),
+            f"Extraction '{extraction.extraction_text}' does not match"
+            f" extracted '{extracted}' using char_interval {char_int}",
+        )
+
+  @parameterized.named_parameters(
+      dict(
+          testcase_name="japanese_with_ascii_dosage_cjk_by_char",
+          text="患者は毎日10mgを服用します。",  # "The patient takes 10mg daily."
+          mock_yaml=textwrap.dedent(f"""\
+            ```yaml
+            {schema.EXTRACTIONS_KEY}:
+            - medication: "10mg"
+              medication_index: 5
+            - action: "服用"  # "take (medicine)"
+              action_index: 7
+            ```"""),
+          expected_extraction_classes=["medication", "action"],
+          expected_extraction_texts=["10mg", "服用"],
+      ),
+      dict(
+          testcase_name="chinese_grouped_cjk_mode",
+          text="病人每天服用10毫克。",  # "The patient takes 10 milligrams daily."
+          mock_yaml=textwrap.dedent(f"""\
+            ```yaml
+            {schema.EXTRACTIONS_KEY}:
+            - dosage: "10毫克"  # "10 milligrams"
+              dosage_index: 1
+            ```"""),
+          expected_extraction_classes=["dosage"],
+          expected_extraction_texts=["10毫克"],
+      ),
+      dict(
+          testcase_name="arabic_rtl_with_indic_digits",
+          text="يأخذ المريض ١٠ ملغ يومياً.",  # "The patient takes 10 mg daily."
+          mock_yaml=textwrap.dedent(f"""\
+            ```yaml
+            {schema.EXTRACTIONS_KEY}:
+            - dosage: "١٠ ملغ"  # "10 mg" (Arabic-Indic numerals)
+              dosage_index: 2
+            ```"""),
+          expected_extraction_classes=["dosage"],
+          expected_extraction_texts=["١٠ ملغ"],
+      ),
+      dict(
+          testcase_name="mixed_script_slash_abbreviation",
+          text="Analyze DNA/РНК results.",  # РНК = RNA in Russian (Cyrillic)
+          mock_yaml=textwrap.dedent(f"""\
+            ```yaml
+            {schema.EXTRACTIONS_KEY}:
+            - analyte: "DNA/РНК"  # DNA/RNA
+              analyte_index: 1
+            ```"""),
+          expected_extraction_classes=["analyte"],
+          expected_extraction_texts=["DNA/РНК"],
+      ),
+      dict(
+          testcase_name="emoji_and_combining_marks",
+          text="Feels 😊 better after 💊!",
+          mock_yaml=textwrap.dedent(f"""\
+            ```yaml
+            {schema.EXTRACTIONS_KEY}:
+            - emoji: "😊"
+              emoji_index: 1
+            - medicine: "💊!"
+              medicine_index: 4
+            ```"""),
+          expected_extraction_classes=["emoji", "medicine"],
+          expected_extraction_texts=["😊", "💊!"],
+      ),
+  )
+  def test_multilingual_annotation(
+      self,
+      text: str,
+      mock_yaml: str,
+      expected_extraction_classes: list[str],
+      expected_extraction_texts: list[str],
+  ):
+    """Test multilingual annotation with various scripts and languages."""
+    self.mock_language_model.infer.return_value = [
+        [types.ScoredOutput(score=1.0, output=mock_yaml)]
+    ]
+
+    resolver = resolver_lib.Resolver(format_type=data.FormatType.YAML)
+    result = self.annotator.annotate_text(text, resolver=resolver)
+
+    # Verify extraction classes
+    actual_classes = [e.extraction_class for e in result.extractions]
+    self.assertCountEqual(actual_classes, expected_extraction_classes)
+
+    # Verify extraction texts
+    actual_texts = [e.extraction_text for e in result.extractions]
+    self.assertCountEqual(actual_texts, expected_extraction_texts)
+
+    # Verify char intervals match source text
+    self.assert_char_interval_match_source(text, result.extractions)
+
+    # Verify all extractions have exact matches
+    for extraction in result.extractions:
+      self.assertEqual(
+          extraction.alignment_status,
+          data.AlignmentStatus.MATCH_EXACT,
+          f"Expected exact match for extraction '{extraction.extraction_text}'",
+      )
+
+  def test_japanese_multitoken_extraction(self):
+    """Test Japanese extraction spanning multiple tokens."""
+    text = (  # "The patient is receiving treatment for hypertension."
+        "患者は高血圧の治療を受けています。"
+    )
+    self.mock_language_model.infer.return_value = [[
+        types.ScoredOutput(
+            score=1.0,
+            output=textwrap.dedent(f"""\
+              ```yaml
+              {schema.EXTRACTIONS_KEY}:
+              - patient: "患者"  # "patient"
+                patient_index: 0
+              - condition: "高血圧"  # "hypertension/high blood pressure"
+                condition_index: 2
+              - treatment: "治療"  # "treatment"
+                treatment_index: 5
+              ```"""),
+        )
+    ]]
+
+    resolver = resolver_lib.Resolver(format_type=data.FormatType.YAML)
+    result = self.annotator.annotate_text(text, resolver=resolver)
+
+    self.assertLen(result.extractions, 3)
+
+    # Verify specific extractions
+    patient_ext = next(
+        e for e in result.extractions if e.extraction_class == "patient"
+    )
+    self.assertEqual(patient_ext.extraction_text, "患者")
+    self.assertEqual(patient_ext.char_interval.start_pos, 0)
+    self.assertEqual(patient_ext.char_interval.end_pos, 2)
+
+    condition_ext = next(
+        e for e in result.extractions if e.extraction_class == "condition"
+    )
+    self.assertEqual(condition_ext.extraction_text, "高血圧")
+
+    # Verify all char intervals match
+    self.assert_char_interval_match_source(text, result.extractions)
+
+  def test_mixed_scripts_in_single_document(self):
+    """Test document with multiple scripts and languages."""
+    text = (  # Mixed: English, Japanese, Russian, Arabic
+        "Patient (患者) received 5мг of medication يومياً."
+    )
+    self.mock_language_model.infer.return_value = [[
+        types.ScoredOutput(
+            score=1.0,
+            output=textwrap.dedent(f"""\
+              ```yaml
+              {schema.EXTRACTIONS_KEY}:
+              - subject: "Patient"
+                subject_index: 0
+              - japanese_term: "患者"  # "patient" in Japanese
+                japanese_term_index: 2
+              - dosage: "5мг"  # "5mg" in Russian (Cyrillic)
+                dosage_index: 5
+              - frequency: "يومياً"  # "daily" in Arabic
+                frequency_index: 8
+              ```"""),
+        )
+    ]]
+
+    resolver = resolver_lib.Resolver(format_type=data.FormatType.YAML)
+    result = self.annotator.annotate_text(text, resolver=resolver)
+
+    self.assertLen(result.extractions, 4)
+
+    # Verify all scripts are correctly extracted
+    extraction_texts = {
+        e.extraction_class: e.extraction_text for e in result.extractions
+    }
+    self.assertEqual(extraction_texts["subject"], "Patient")
+    self.assertEqual(extraction_texts["japanese_term"], "患者")
+    self.assertEqual(extraction_texts["dosage"], "5мг")
+    self.assertEqual(extraction_texts["frequency"], "يومياً")
+
+    self.assert_char_interval_match_source(text, result.extractions)
+
+  def test_korean_with_spaces(self):
+    """Test Korean text with spaces between words."""
+    text = "환자는 매일 약을 복용합니다."  # "The patient takes medicine daily."
+    self.mock_language_model.infer.return_value = [[
+        types.ScoredOutput(
+            score=1.0,
+            output=textwrap.dedent(f"""\
+              ```yaml
+              {schema.EXTRACTIONS_KEY}:
+              - patient: "환자"  # "patient"
+                patient_index: 0
+              - frequency: "매일"  # "daily/every day"
+                frequency_index: 1
+              - medication: "약"  # "medicine/drug"
+                medication_index: 2
+              ```"""),
+        )
+    ]]
+
+    resolver = resolver_lib.Resolver(format_type=data.FormatType.YAML)
+    result = self.annotator.annotate_text(text, resolver=resolver)
+
+    self.assertLen(result.extractions, 3)
+    self.assert_char_interval_match_source(text, result.extractions)
+
+  def test_devanagari_script_extraction_preserves_combining_characters(self):
+    """Test Hindi/Devanagari script extraction."""
+    text = (  # "The patient should take 10mg medicine daily."
+        "रोगी को प्रतिदिन 10mg दवा लेनी चाहिए।"
+    )
+    self.mock_language_model.infer.return_value = [[
+        types.ScoredOutput(
+            score=1.0,
+            output=textwrap.dedent(f"""\
+              ```yaml
+              {schema.EXTRACTIONS_KEY}:
+              - patient: "रोगी"  # "patient"
+                patient_index: 0
+              - frequency: "प्रतिदिन"  # "daily"
+                frequency_index: 2
+              - dosage: "10mg"
+                dosage_index: 3
+              - medication: "दवा"  # "medicine"
+                medication_index: 4
+              ```"""),
+        )
+    ]]
+
+    resolver = resolver_lib.Resolver(format_type=data.FormatType.YAML)
+    result = self.annotator.annotate_text(text, resolver=resolver)
+
+    self.assertLen(result.extractions, 4)
+    self.assert_char_interval_match_source(text, result.extractions)
 
 
 if __name__ == "__main__":

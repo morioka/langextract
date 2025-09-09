@@ -20,7 +20,7 @@ from absl.testing import absltest
 
 from langextract import exceptions
 from langextract import factory
-from langextract import schema
+from langextract.core import schema
 import langextract as lx
 from langextract.core import data
 from langextract.providers import gemini
@@ -546,7 +546,7 @@ class SchemaShimTest(absltest.TestCase):
 
   def test_extractions_key_import(self):
     """Test that EXTRACTIONS_KEY can be imported from schema module."""
-    from langextract import schema as lx_schema  # pylint: disable=reimported,import-outside-toplevel
+    from langextract.core import schema as lx_schema  # pylint: disable=reimported,import-outside-toplevel
 
     self.assertEqual(
         lx_schema.EXTRACTIONS_KEY,
@@ -556,7 +556,7 @@ class SchemaShimTest(absltest.TestCase):
 
   def test_constraint_types_import(self):
     """Test that Constraint and ConstraintType can be imported."""
-    from langextract import schema as lx_schema  # pylint: disable=reimported,import-outside-toplevel
+    from langextract.core import schema as lx_schema  # pylint: disable=reimported,import-outside-toplevel
 
     constraint = lx_schema.Constraint()
     self.assertEqual(

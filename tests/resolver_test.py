@@ -20,7 +20,7 @@ from absl.testing import parameterized
 
 from langextract import chunking
 from langextract import resolver as resolver_lib
-from langextract import schema
+from langextract.core import schema
 from langextract.core import data
 from langextract.core import tokenizer
 
