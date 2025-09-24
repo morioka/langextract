@@ -24,7 +24,6 @@ from absl.testing import parameterized
 from langextract import annotation
 from langextract import prompting
 from langextract import resolver as resolver_lib
-from langextract.core import schema
 from langextract.core import data
 from langextract.core import tokenizer
 from langextract.core import types
@@ -86,7 +85,7 @@ class AnnotatorTest(absltest.TestCase):
             score=1.0,
             output=textwrap.dedent(f"""\
               ```yaml
-              {schema.EXTRACTIONS_KEY}:
+              {data.EXTRACTIONS_KEY}:
               - patient: "Jane Doe"
                 patient_index: 1
                 patient_id: "67890"
@@ -104,7 +103,10 @@ class AnnotatorTest(absltest.TestCase):
               ```"""),
         )
     ]]
-    resolver = resolver_lib.Resolver(format_type=data.FormatType.YAML)
+    resolver = resolver_lib.Resolver(
+        format_type=data.FormatType.YAML,
+        extraction_index_suffix=resolver_lib.DEFAULT_INDEX_SUFFIX,
+    )
     expected_annotated_text = data.AnnotatedDocument(
         text=text,
         extractions=[
@@ -209,7 +211,7 @@ class AnnotatorTest(absltest.TestCase):
             score=1.0,
             output=textwrap.dedent(f"""\
               ```yaml
-              {schema.EXTRACTIONS_KEY}:
+              {data.EXTRACTIONS_KEY}:
               - patient: "Jane Doe"
                 patient_id: "67890"
                 dosage: "10mg"
@@ -328,7 +330,7 @@ class AnnotatorTest(absltest.TestCase):
             score=1.0,
             output=textwrap.dedent(f"""\
               ```yaml
-              {schema.EXTRACTIONS_KEY}:
+              {data.EXTRACTIONS_KEY}:
               - patient: "Jane Doe"
                 patient_attributes:
                   status: "IDENTIFIABLE"
@@ -356,7 +358,7 @@ class AnnotatorTest(absltest.TestCase):
     resolver = resolver_lib.Resolver(
         format_type=data.FormatType.YAML,
         extraction_index_suffix=None,
-        extraction_attributes_suffix="_attributes",
+        extraction_attributes_suffix=data.ATTRIBUTE_SUFFIX,
     )
     expected_annotated_text = data.AnnotatedDocument(
         text=text,
@@ -469,7 +471,7 @@ class AnnotatorTest(absltest.TestCase):
                 score=1.0,
                 output=textwrap.dedent(f"""\
                   ```yaml
-                  {schema.EXTRACTIONS_KEY}:
+                  {data.EXTRACTIONS_KEY}:
                   - medication: "Aspirin"
                     medication_index: 4
                     reason: "headache"
@@ -482,7 +484,7 @@ class AnnotatorTest(absltest.TestCase):
                 score=1.0,
                 output=textwrap.dedent(f"""\
                   ```yaml
-                  {schema.EXTRACTIONS_KEY}:
+                  {data.EXTRACTIONS_KEY}:
                   - condition: "fever"
                     condition_index: 2
                   ```"""),
@@ -502,6 +504,7 @@ class AnnotatorTest(absltest.TestCase):
 
     resolver = resolver_lib.Resolver(
         format_type=data.FormatType.YAML,
+        extraction_index_suffix=resolver_lib.DEFAULT_INDEX_SUFFIX,
     )
     expected_annotated_text = data.AnnotatedDocument(
         text=text,
@@ -568,12 +571,13 @@ class AnnotatorTest(absltest.TestCase):
             score=1.0,
             output=textwrap.dedent(f"""\
             ```yaml
-            {schema.EXTRACTIONS_KEY}: []
+            {data.EXTRACTIONS_KEY}: []
             ```"""),
         )
     ]]
     resolver = resolver_lib.Resolver(
         format_type=data.FormatType.YAML,
+        extraction_index_suffix=resolver_lib.DEFAULT_INDEX_SUFFIX,
     )
     expected_annotated_text = data.AnnotatedDocument(text=text, extractions=[])
 
@@ -592,7 +596,7 @@ class AnnotatorMultipleDocumentTest(parameterized.TestCase):
 
   _LLM_INFERENCE = textwrap.dedent(f"""\
     ```yaml
-    {schema.EXTRACTIONS_KEY}:
+    {data.EXTRACTIONS_KEY}:
     - PATIENT: "Patient"
       PATIENT_index: 0
     - SYMPTOM: "migraine"
@@ -720,7 +724,9 @@ class AnnotatorMultipleDocumentTest(parameterized.TestCase):
         annotator.annotate_documents(
             document_objects,
             resolver=resolver_lib.Resolver(
-                fence_output=True, format_type=data.FormatType.YAML
+                fence_output=True,
+                format_type=data.FormatType.YAML,
+                extraction_index_suffix=resolver_lib.DEFAULT_INDEX_SUFFIX,
             ),
             max_char_buffer=200,
             batch_length=batch_length,
@@ -816,7 +822,7 @@ class AnnotatorMultiPassTest(absltest.TestCase):
                 score=1.0,
                 output=textwrap.dedent(f"""\
               ```yaml
-              {schema.EXTRACTIONS_KEY}:
+              {data.EXTRACTIONS_KEY}:
               - patient: "John Smith"
                 patient_index: 1
               - condition: "diabetes"
@@ -829,7 +835,7 @@ class AnnotatorMultiPassTest(absltest.TestCase):
                 score=1.0,
                 output=textwrap.dedent(f"""\
               ```yaml
-              {schema.EXTRACTIONS_KEY}:
+              {data.EXTRACTIONS_KEY}:
               - medication: "insulin"
                 medication_index: 7
               - frequency: "daily"
@@ -839,7 +845,10 @@ class AnnotatorMultiPassTest(absltest.TestCase):
         ]],
     ]
 
-    resolver = resolver_lib.Resolver(format_type=data.FormatType.YAML)
+    resolver = resolver_lib.Resolver(
+        format_type=data.FormatType.YAML,
+        extraction_index_suffix=resolver_lib.DEFAULT_INDEX_SUFFIX,
+    )
 
     result = self.annotator.annotate_text(
         text, resolver=resolver, extraction_passes=2, debug=False
@@ -864,7 +873,7 @@ class AnnotatorMultiPassTest(absltest.TestCase):
                 score=1.0,
                 output=textwrap.dedent(f"""\
               ```yaml
-              {schema.EXTRACTIONS_KEY}:
+              {data.EXTRACTIONS_KEY}:
               - doctor: "Dr. Smith"
                 doctor_index: 0
               ```"""),
@@ -875,7 +884,7 @@ class AnnotatorMultiPassTest(absltest.TestCase):
                 score=1.0,
                 output=textwrap.dedent(f"""\
               ```yaml
-              {schema.EXTRACTIONS_KEY}:
+              {data.EXTRACTIONS_KEY}:
               - patient: "Smith"
                 patient_index: 1
               - medication: "aspirin"
@@ -885,7 +894,10 @@ class AnnotatorMultiPassTest(absltest.TestCase):
         ]],
     ]
 
-    resolver = resolver_lib.Resolver(format_type=data.FormatType.YAML)
+    resolver = resolver_lib.Resolver(
+        format_type=data.FormatType.YAML,
+        extraction_index_suffix=resolver_lib.DEFAULT_INDEX_SUFFIX,
+    )
 
     result = self.annotator.annotate_text(
         text, resolver=resolver, extraction_passes=2, debug=False
@@ -910,7 +922,7 @@ class AnnotatorMultiPassTest(absltest.TestCase):
             score=1.0,
             output=textwrap.dedent(f"""\
               ```yaml
-              {schema.EXTRACTIONS_KEY}:
+              {data.EXTRACTIONS_KEY}:
               - patient: "Patient"
                 patient_index: 0
               - condition: "fever"
@@ -919,7 +931,10 @@ class AnnotatorMultiPassTest(absltest.TestCase):
         )
     ]]
 
-    resolver = resolver_lib.Resolver(format_type=data.FormatType.YAML)
+    resolver = resolver_lib.Resolver(
+        format_type=data.FormatType.YAML,
+        extraction_index_suffix=resolver_lib.DEFAULT_INDEX_SUFFIX,
+    )
 
     result = self.annotator.annotate_text(
         text, resolver=resolver, extraction_passes=1, debug=False  # Single pass
@@ -938,7 +953,7 @@ class AnnotatorMultiPassTest(absltest.TestCase):
                 score=1.0,
                 output=textwrap.dedent(f"""\
               ```yaml
-              {schema.EXTRACTIONS_KEY}:
+              {data.EXTRACTIONS_KEY}:
               - test: "Test"
                 test_index: 0
               ```"""),
@@ -949,13 +964,16 @@ class AnnotatorMultiPassTest(absltest.TestCase):
                 score=1.0,
                 output=textwrap.dedent(f"""\
               ```yaml
-              {schema.EXTRACTIONS_KEY}: []
+              {data.EXTRACTIONS_KEY}: []
               ```"""),
             )
         ]],
     ]
 
-    resolver = resolver_lib.Resolver(format_type=data.FormatType.YAML)
+    resolver = resolver_lib.Resolver(
+        format_type=data.FormatType.YAML,
+        extraction_index_suffix=resolver_lib.DEFAULT_INDEX_SUFFIX,
+    )
 
     result = self.annotator.annotate_text(
         text, resolver=resolver, extraction_passes=2, debug=False
@@ -1142,7 +1160,7 @@ class AnnotatorMultilingualTest(parameterized.TestCase):
           text="患者は毎日10mgを服用します。",  # "The patient takes 10mg daily."
           mock_yaml=textwrap.dedent(f"""\
             ```yaml
-            {schema.EXTRACTIONS_KEY}:
+            {data.EXTRACTIONS_KEY}:
             - medication: "10mg"
               medication_index: 5
             - action: "服用"  # "take (medicine)"
@@ -1156,7 +1174,7 @@ class AnnotatorMultilingualTest(parameterized.TestCase):
           text="病人每天服用10毫克。",  # "The patient takes 10 milligrams daily."
           mock_yaml=textwrap.dedent(f"""\
             ```yaml
-            {schema.EXTRACTIONS_KEY}:
+            {data.EXTRACTIONS_KEY}:
             - dosage: "10毫克"  # "10 milligrams"
               dosage_index: 1
             ```"""),
@@ -1168,7 +1186,7 @@ class AnnotatorMultilingualTest(parameterized.TestCase):
           text="يأخذ المريض ١٠ ملغ يومياً.",  # "The patient takes 10 mg daily."
           mock_yaml=textwrap.dedent(f"""\
             ```yaml
-            {schema.EXTRACTIONS_KEY}:
+            {data.EXTRACTIONS_KEY}:
             - dosage: "١٠ ملغ"  # "10 mg" (Arabic-Indic numerals)
               dosage_index: 2
             ```"""),
@@ -1180,7 +1198,7 @@ class AnnotatorMultilingualTest(parameterized.TestCase):
           text="Analyze DNA/РНК results.",  # РНК = RNA in Russian (Cyrillic)
           mock_yaml=textwrap.dedent(f"""\
             ```yaml
-            {schema.EXTRACTIONS_KEY}:
+            {data.EXTRACTIONS_KEY}:
             - analyte: "DNA/РНК"  # DNA/RNA
               analyte_index: 1
             ```"""),
@@ -1192,7 +1210,7 @@ class AnnotatorMultilingualTest(parameterized.TestCase):
           text="Feels 😊 better after 💊!",
           mock_yaml=textwrap.dedent(f"""\
             ```yaml
-            {schema.EXTRACTIONS_KEY}:
+            {data.EXTRACTIONS_KEY}:
             - emoji: "😊"
               emoji_index: 1
             - medicine: "💊!"
@@ -1214,7 +1232,10 @@ class AnnotatorMultilingualTest(parameterized.TestCase):
         [types.ScoredOutput(score=1.0, output=mock_yaml)]
     ]
 
-    resolver = resolver_lib.Resolver(format_type=data.FormatType.YAML)
+    resolver = resolver_lib.Resolver(
+        format_type=data.FormatType.YAML,
+        extraction_index_suffix=resolver_lib.DEFAULT_INDEX_SUFFIX,
+    )
     result = self.annotator.annotate_text(text, resolver=resolver)
 
     # Verify extraction classes
@@ -1246,7 +1267,7 @@ class AnnotatorMultilingualTest(parameterized.TestCase):
             score=1.0,
             output=textwrap.dedent(f"""\
               ```yaml
-              {schema.EXTRACTIONS_KEY}:
+              {data.EXTRACTIONS_KEY}:
               - patient: "患者"  # "patient"
                 patient_index: 0
               - condition: "高血圧"  # "hypertension/high blood pressure"
@@ -1257,7 +1278,10 @@ class AnnotatorMultilingualTest(parameterized.TestCase):
         )
     ]]
 
-    resolver = resolver_lib.Resolver(format_type=data.FormatType.YAML)
+    resolver = resolver_lib.Resolver(
+        format_type=data.FormatType.YAML,
+        extraction_index_suffix=resolver_lib.DEFAULT_INDEX_SUFFIX,
+    )
     result = self.annotator.annotate_text(text, resolver=resolver)
 
     self.assertLen(result.extractions, 3)
@@ -1288,7 +1312,7 @@ class AnnotatorMultilingualTest(parameterized.TestCase):
             score=1.0,
             output=textwrap.dedent(f"""\
               ```yaml
-              {schema.EXTRACTIONS_KEY}:
+              {data.EXTRACTIONS_KEY}:
               - subject: "Patient"
                 subject_index: 0
               - japanese_term: "患者"  # "patient" in Japanese
@@ -1301,7 +1325,10 @@ class AnnotatorMultilingualTest(parameterized.TestCase):
         )
     ]]
 
-    resolver = resolver_lib.Resolver(format_type=data.FormatType.YAML)
+    resolver = resolver_lib.Resolver(
+        format_type=data.FormatType.YAML,
+        extraction_index_suffix=resolver_lib.DEFAULT_INDEX_SUFFIX,
+    )
     result = self.annotator.annotate_text(text, resolver=resolver)
 
     self.assertLen(result.extractions, 4)
@@ -1325,7 +1352,7 @@ class AnnotatorMultilingualTest(parameterized.TestCase):
             score=1.0,
             output=textwrap.dedent(f"""\
               ```yaml
-              {schema.EXTRACTIONS_KEY}:
+              {data.EXTRACTIONS_KEY}:
               - patient: "환자"  # "patient"
                 patient_index: 0
               - frequency: "매일"  # "daily/every day"
@@ -1336,7 +1363,10 @@ class AnnotatorMultilingualTest(parameterized.TestCase):
         )
     ]]
 
-    resolver = resolver_lib.Resolver(format_type=data.FormatType.YAML)
+    resolver = resolver_lib.Resolver(
+        format_type=data.FormatType.YAML,
+        extraction_index_suffix=resolver_lib.DEFAULT_INDEX_SUFFIX,
+    )
     result = self.annotator.annotate_text(text, resolver=resolver)
 
     self.assertLen(result.extractions, 3)
@@ -1352,7 +1382,7 @@ class AnnotatorMultilingualTest(parameterized.TestCase):
             score=1.0,
             output=textwrap.dedent(f"""\
               ```yaml
-              {schema.EXTRACTIONS_KEY}:
+              {data.EXTRACTIONS_KEY}:
               - patient: "रोगी"  # "patient"
                 patient_index: 0
               - frequency: "प्रतिदिन"  # "daily"
@@ -1365,7 +1395,10 @@ class AnnotatorMultilingualTest(parameterized.TestCase):
         )
     ]]
 
-    resolver = resolver_lib.Resolver(format_type=data.FormatType.YAML)
+    resolver = resolver_lib.Resolver(
+        format_type=data.FormatType.YAML,
+        extraction_index_suffix=resolver_lib.DEFAULT_INDEX_SUFFIX,
+    )
     result = self.annotator.annotate_text(text, resolver=resolver)
 
     self.assertLen(result.extractions, 4)
