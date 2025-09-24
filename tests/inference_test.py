@@ -142,7 +142,7 @@ class TestOllamaLanguageModel(absltest.TestCase):
     model = ollama.OllamaLanguageModel(
         model_id="gemma2:latest",
         model_url="http://localhost:11434",
-        structured_output_format="json",
+        format_type=data.FormatType.JSON,
     )
     batch_prompts = ["What is bus in Hungarian?"]
     results = list(model.infer(batch_prompts))
