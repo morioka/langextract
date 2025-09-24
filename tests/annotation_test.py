@@ -28,7 +28,7 @@ from langextract.core import data
 from langextract.core import tokenizer
 from langextract.core import types
 from langextract.providers import gemini
-
+from langextract.core import format_handler as fh
 
 class AnnotatorTest(absltest.TestCase):
 
@@ -103,8 +103,10 @@ class AnnotatorTest(absltest.TestCase):
               ```"""),
         )
     ]]
-    resolver = resolver_lib.Resolver(
-        format_type=data.FormatType.YAML,
+    resolver=resolver_lib.Resolver(
+        format_handler=fh.FormatHandler(
+            format_type=data.FormatType.YAML
+        ),
         extraction_index_suffix=resolver_lib.DEFAULT_INDEX_SUFFIX,
     )
     expected_annotated_text = data.AnnotatedDocument(
@@ -355,10 +357,12 @@ class AnnotatorTest(absltest.TestCase):
               ```"""),
         )
     ]]
-    resolver = resolver_lib.Resolver(
-        format_type=data.FormatType.YAML,
-        extraction_index_suffix=None,
-        extraction_attributes_suffix=data.ATTRIBUTE_SUFFIX,
+    resolver=resolver_lib.Resolver(
+        format_handler=fh.FormatHandler(
+            format_type=data.FormatType.YAML,
+            attribute_suffix=data.ATTRIBUTE_SUFFIX,
+        ),
+        extraction_index_suffix=None
     )
     expected_annotated_text = data.AnnotatedDocument(
         text=text,
@@ -502,8 +506,10 @@ class AnnotatorTest(absltest.TestCase):
     # Index | 0        1     2    3        4    5         6  7    8    9     10
     # Token | Patient  takes one  Aspirin  for  headaches .  Pt   has  fever  .
 
-    resolver = resolver_lib.Resolver(
-        format_type=data.FormatType.YAML,
+    resolver=resolver_lib.Resolver(
+        format_handler=fh.FormatHandler(
+            format_type=data.FormatType.YAML
+        ),
         extraction_index_suffix=resolver_lib.DEFAULT_INDEX_SUFFIX,
     )
     expected_annotated_text = data.AnnotatedDocument(
@@ -575,8 +581,10 @@ class AnnotatorTest(absltest.TestCase):
             ```"""),
         )
     ]]
-    resolver = resolver_lib.Resolver(
-        format_type=data.FormatType.YAML,
+    resolver=resolver_lib.Resolver(
+        format_handler=fh.FormatHandler(
+            format_type=data.FormatType.YAML
+        ),
         extraction_index_suffix=resolver_lib.DEFAULT_INDEX_SUFFIX,
     )
     expected_annotated_text = data.AnnotatedDocument(text=text, extractions=[])
