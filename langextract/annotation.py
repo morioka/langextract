@@ -243,8 +243,11 @@ class Annotator:
       ValueError: If there are no scored outputs during inference.
     """
     if resolver is None:
-      resolver = resolver_lib.Resolver(format_type=data.FormatType.YAML)
-
+      resolver=resolver_lib.Resolver(
+          format_handler=fh.FormatHandler(
+              format_type=data.FormatType.YAML,
+          )
+      )
     if extraction_passes == 1:
       yield from self._annotate_documents_single_pass(
           documents,
