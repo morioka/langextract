@@ -224,8 +224,10 @@ class AnnotatorTest(absltest.TestCase):
               ```"""),
         )
     ]]
-    resolver = resolver_lib.Resolver(
-        format_type=data.FormatType.YAML,
+    resolver=resolver_lib.Resolver(
+        format_handler=fh.FormatHandler(
+            format_type=data.FormatType.YAML,
+        ),
         extraction_index_suffix=None,
     )
     expected_annotated_text = data.AnnotatedDocument(
@@ -732,8 +734,10 @@ class AnnotatorMultipleDocumentTest(parameterized.TestCase):
         annotator.annotate_documents(
             document_objects,
             resolver=resolver_lib.Resolver(
-                fence_output=True,
-                format_type=data.FormatType.YAML,
+                format_handler=fh.FormatHandler(
+                    format_type=data.FormatType.YAML,
+                    use_fences=True,
+                ),
                 extraction_index_suffix=resolver_lib.DEFAULT_INDEX_SUFFIX,
             ),
             max_char_buffer=200,
@@ -853,8 +857,10 @@ class AnnotatorMultiPassTest(absltest.TestCase):
         ]],
     ]
 
-    resolver = resolver_lib.Resolver(
-        format_type=data.FormatType.YAML,
+    resolver=resolver_lib.Resolver(
+        format_handler=fh.FormatHandler(
+            format_type=data.FormatType.YAML,
+        ),
         extraction_index_suffix=resolver_lib.DEFAULT_INDEX_SUFFIX,
     )
 
@@ -902,8 +908,10 @@ class AnnotatorMultiPassTest(absltest.TestCase):
         ]],
     ]
 
-    resolver = resolver_lib.Resolver(
-        format_type=data.FormatType.YAML,
+    resolver=resolver_lib.Resolver(
+        format_handler=fh.FormatHandler(
+            format_type=data.FormatType.YAML,
+        ),
         extraction_index_suffix=resolver_lib.DEFAULT_INDEX_SUFFIX,
     )
 
@@ -939,8 +947,10 @@ class AnnotatorMultiPassTest(absltest.TestCase):
         )
     ]]
 
-    resolver = resolver_lib.Resolver(
-        format_type=data.FormatType.YAML,
+    resolver=resolver_lib.Resolver(
+        format_handler=fh.FormatHandler(
+            format_type=data.FormatType.YAML,
+        ),
         extraction_index_suffix=resolver_lib.DEFAULT_INDEX_SUFFIX,
     )
 
@@ -978,8 +988,10 @@ class AnnotatorMultiPassTest(absltest.TestCase):
         ]],
     ]
 
-    resolver = resolver_lib.Resolver(
-        format_type=data.FormatType.YAML,
+    resolver=resolver_lib.Resolver(
+        format_handler=fh.FormatHandler(
+            format_type=data.FormatType.YAML,
+        ),
         extraction_index_suffix=resolver_lib.DEFAULT_INDEX_SUFFIX,
     )
 
@@ -1240,8 +1252,10 @@ class AnnotatorMultilingualTest(parameterized.TestCase):
         [types.ScoredOutput(score=1.0, output=mock_yaml)]
     ]
 
-    resolver = resolver_lib.Resolver(
-        format_type=data.FormatType.YAML,
+    resolver=resolver_lib.Resolver(
+        format_handler=fh.FormatHandler(
+            format_type=data.FormatType.YAML,
+        ),
         extraction_index_suffix=resolver_lib.DEFAULT_INDEX_SUFFIX,
     )
     result = self.annotator.annotate_text(text, resolver=resolver)
@@ -1286,8 +1300,10 @@ class AnnotatorMultilingualTest(parameterized.TestCase):
         )
     ]]
 
-    resolver = resolver_lib.Resolver(
-        format_type=data.FormatType.YAML,
+    resolver=resolver_lib.Resolver(
+        format_handler=fh.FormatHandler(
+            format_type=data.FormatType.YAML,
+        ),
         extraction_index_suffix=resolver_lib.DEFAULT_INDEX_SUFFIX,
     )
     result = self.annotator.annotate_text(text, resolver=resolver)
@@ -1333,8 +1349,10 @@ class AnnotatorMultilingualTest(parameterized.TestCase):
         )
     ]]
 
-    resolver = resolver_lib.Resolver(
-        format_type=data.FormatType.YAML,
+    resolver=resolver_lib.Resolver(
+        format_handler=fh.FormatHandler(
+            format_type=data.FormatType.YAML,
+        ),
         extraction_index_suffix=resolver_lib.DEFAULT_INDEX_SUFFIX,
     )
     result = self.annotator.annotate_text(text, resolver=resolver)
@@ -1371,8 +1389,10 @@ class AnnotatorMultilingualTest(parameterized.TestCase):
         )
     ]]
 
-    resolver = resolver_lib.Resolver(
-        format_type=data.FormatType.YAML,
+    resolver=resolver_lib.Resolver(
+        format_handler=fh.FormatHandler(
+            format_type=data.FormatType.YAML,
+        ),
         extraction_index_suffix=resolver_lib.DEFAULT_INDEX_SUFFIX,
     )
     result = self.annotator.annotate_text(text, resolver=resolver)
@@ -1403,8 +1423,10 @@ class AnnotatorMultilingualTest(parameterized.TestCase):
         )
     ]]
 
-    resolver = resolver_lib.Resolver(
-        format_type=data.FormatType.YAML,
+    resolver=resolver_lib.Resolver(
+        format_handler=fh.FormatHandler(
+            format_type=data.FormatType.YAML,
+        ),
         extraction_index_suffix=resolver_lib.DEFAULT_INDEX_SUFFIX,
     )
     result = self.annotator.annotate_text(text, resolver=resolver)
